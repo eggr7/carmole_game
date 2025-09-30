@@ -101,4 +101,3 @@ class CarComponent extends RectangleComponent with CollisionCallbacks, HasGameRe
     }
   }
 }
-

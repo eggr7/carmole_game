@@ -6,6 +6,7 @@ Carmole is a Flame-based 2D puzzle game inspired by titles like Candy Crush, but
 
 ## 🚀 Getting Started
 1. Project Setup
+
 1.1 Clone the repository or create a new folder:
 
     cd C:\Users\Colibecas\Documents\Flutter-projects
@@ -130,4 +131,4 @@ Add sound and particle effects
 
 Refine car sprites and visual effects
 
-* Feel free to contribute, report bugs, or suggest features! *
+### * Feel free to contribute, report bugs, or suggest features! *

@@ -95,4 +95,107 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
       car.removeFromParent();
     }
   }
+
+  void checkForMatches() {
+    final List<CarComponent> matchedCars = [];
+
+    // Check for horizontal matches
+    for (int row = 0; row < CarmoleGame.gridHeight; row++) {
+      for (int col = 0; col <= CarmoleGame.gridWidth - 4; col++) {
+        final car = grid[row][col];
+        if (car != null) {
+          final match = [car];
+          for (int i = 1; i < 4; i++) {
+            final nextCar = grid[row][col + i];
+            if (nextCar != null && nextCar.carColor == car.carColor) {
+              match.add(nextCar);
+            } else {
+              break;
+            }
+          }
+          if (match.length >= 4) {
+            matchedCars.addAll(match);
+          }
+        }
+      }
+    }
+
+    // Check for vertical matches
+    for (int col = 0; col < CarmoleGame.gridWidth; col++) {
+      for (int row = 0; row <= CarmoleGame.gridHeight - 4; row++) {
+        final car = grid[row][col];
+        if (car != null) {
+          final match = [car];
+          for (int i = 1; i < 4; i++) {
+            final nextCar = grid[row + i][col];
+            if (nextCar != null && nextCar.carColor == car.carColor) {
+              match.add(nextCar);
+            } else {
+              break;
+            }
+          }
+          if (match.length >= 4) {
+            matchedCars.addAll(match);
+          }
+        }
+      }
+    }
+
+    // Mark matched cars
+    for (final car in matchedCars) {
+      car.markAsMatched();
+    }
+
+    // Clear matched cars after a delay
+    if (matchedCars.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        clearMatches();
+      });
+    }
+  }
+
+  void clearMatches() {
+    int clearedCars = 0;
+    for (int row = 0; row < CarmoleGame.gridHeight; row++) {
+      for (int col = 0; col < CarmoleGame.gridWidth; col++) {
+        final car = grid[row][col];
+        if (car != null && car.isMatched) {
+          removeCar(row, col);
+          clearedCars++;
+        }
+      }
+    }
+    if (clearedCars > 0) {
+      game.gameState.carCleared();
+      game.gameState.matchCleared(clearedCars);
+    }
+    applyGravity();
+  }
+
+  void clearGrid() {
+    for (int row = 0; row < CarmoleGame.gridHeight; row++) {
+      for (int col = 0; col < CarmoleGame.gridWidth; col++) {
+        removeCar(row, col);
+      }
+    }
+  }
+
+  void applyGravity() {
+    for (int col = 0; col < CarmoleGame.gridWidth; col++) {
+      for (int row = CarmoleGame.gridHeight - 2; row >= 0; row--) {
+        final car = grid[row][col];
+        if (car != null) {
+          int newRow = row;
+          while (newRow < CarmoleGame.gridHeight - 1 &&
+                 isCellEmpty(newRow + 1, col)) {
+            newRow++;
+          }
+          if (newRow != row) {
+            grid[row][col] = null;
+            placeCar(car, newRow, col);
+          }
+        }
+      }
+    }
+  }
 }
