@@ -1,50 +1,24 @@
 import 'package:flame/components.dart';
-// import 'package:flame/effects.dart';
-import 'package:flutter/material.dart';
-// import 'dart:math';
+// import 'package:flutter/material.dart';
 import '../game/carmole_game.dart';
 import 'car_component.dart';
 
-class CraneComponent extends PositionComponent with HasGameReference<CarmoleGame> {
-  late RectangleComponent craneArm;
-  late RectangleComponent craneCable;
-  late CircleComponent craneHook;
+class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> {
   bool isDropping = false;
   int currentColumn = 3; // Start in middle
-  
+
+  CraneComponent()
+      : super(
+          size: Vector2(200, 100),
+          anchor: Anchor.center,
+        );
+
   @override
   Future<void> onLoad() async {
     super.onLoad();
-    
-    // Create crane arm
-    craneArm = RectangleComponent(
-      size: Vector2(200, 20),
-      paint: Paint()..color = Colors.brown,
-      position: Vector2(-100, 0),
-      anchor: Anchor.center,
-    );
-    
-    // Create cable
-    craneCable = RectangleComponent(
-      size: Vector2(4, 80),
-      paint: Paint()..color = Colors.grey.shade600,
-      position: Vector2(-2, 20),
-      anchor: Anchor.topCenter,
-    );
-    
-    // Create hook
-    craneHook = CircleComponent(
-      radius: 8,
-      paint: Paint()..color = Colors.yellow.shade700,
-      position: Vector2(0, 100),
-      anchor: Anchor.center,
-    );
-    
-    add(craneArm);
-    add(craneCable);
-    add(craneHook);
+    sprite = await game.loadSprite('crane_sprite.png');
   }
-  
+
   void dropCar() {
     if (isDropping) return;
 

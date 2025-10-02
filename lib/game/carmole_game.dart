@@ -6,7 +6,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
-// Import our custom components (we'll create these files next)
+// import our components and game state manager
 import '../components/grid_component.dart';
 import '../components/crane_component.dart';
 import '../components/button_component.dart';
@@ -88,7 +88,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   void onTapDown(TapDownEvent event) {
     if (gameState.isGameOver) {
       if (restartButton.containsPoint(event.localPosition)) {
-        restartButton.onPressed?.call();
+        restartButton.onPressed.call();
       }
       return;
     }

@@ -4,8 +4,14 @@ import 'game/carmole_game.dart';
 
 void main() {
   runApp(
-    GameWidget(
-      game: CarmoleGame(),
+    MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: GameWidget(
+            game: CarmoleGame(),
+          ),
+        ),
+      ),
     ),
   );
 }
