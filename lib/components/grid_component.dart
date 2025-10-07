@@ -12,14 +12,18 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
   Future<void> onLoad() async {
     super.onLoad();
     
-    // Create grid background
+    // Create grid background centered at origin
     background = RectangleComponent(
       size: Vector2(
         CarmoleGame.gridWidth * CarmoleGame.cellSize,
         CarmoleGame.gridHeight * CarmoleGame.cellSize,
       ),
       paint: Paint()..color = Colors.grey.shade800,
-      position: Vector2.zero(),
+      position: Vector2(
+        -(CarmoleGame.gridWidth * CarmoleGame.cellSize) / 2,
+        -(CarmoleGame.gridHeight * CarmoleGame.cellSize) / 2,
+      ),
+      anchor: Anchor.topLeft,
     );
     add(background);
     
@@ -38,12 +42,16 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
   }
   
   void _addGridLines() {
+    final double gridStartX = -(CarmoleGame.gridWidth * CarmoleGame.cellSize) / 2;
+    final double gridStartY = -(CarmoleGame.gridHeight * CarmoleGame.cellSize) / 2;
+    
     // Vertical lines
     for (int i = 0; i <= CarmoleGame.gridWidth; i++) {
       final line = RectangleComponent(
         size: Vector2(2, CarmoleGame.gridHeight * CarmoleGame.cellSize),
         paint: Paint()..color = Colors.white24,
-        position: Vector2(i * CarmoleGame.cellSize, 0),
+        position: Vector2(gridStartX + i * CarmoleGame.cellSize, gridStartY),
+        anchor: Anchor.topLeft,
       );
       add(line);
     }
@@ -53,16 +61,20 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
       final line = RectangleComponent(
         size: Vector2(CarmoleGame.gridWidth * CarmoleGame.cellSize, 2),
         paint: Paint()..color = Colors.white24,
-        position: Vector2(0, i * CarmoleGame.cellSize),
+        position: Vector2(gridStartX, gridStartY + i * CarmoleGame.cellSize),
+        anchor: Anchor.topLeft,
       );
       add(line);
     }
   }
   
   Vector2 getCellPosition(int row, int col) {
+    final double gridStartX = -(CarmoleGame.gridWidth * CarmoleGame.cellSize) / 2;
+    final double gridStartY = -(CarmoleGame.gridHeight * CarmoleGame.cellSize) / 2;
+    
     return Vector2(
-      col * CarmoleGame.cellSize + CarmoleGame.cellSize / 2,
-      row * CarmoleGame.cellSize + CarmoleGame.cellSize / 2,
+      gridStartX + col * CarmoleGame.cellSize + CarmoleGame.cellSize / 2,
+      gridStartY + row * CarmoleGame.cellSize + CarmoleGame.cellSize / 2,
     );
   }
   

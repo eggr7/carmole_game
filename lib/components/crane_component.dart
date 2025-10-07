@@ -9,7 +9,7 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
 
   CraneComponent()
       : super(
-          size: Vector2(200, 100),
+          size: Vector2(120, 120),
           anchor: Anchor.center,
         );
 
@@ -17,6 +17,10 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
   Future<void> onLoad() async {
     super.onLoad();
     sprite = await game.loadSprite('crane_sprite.png');
+    
+    // Scale the crane sprite to 120x120 pixels (assuming original is ~500x500)
+    final double scaleFactor = 120.0 / 500.0;
+    scale = Vector2.all(scaleFactor);
   }
 
   void dropCar() {
@@ -54,14 +58,16 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
   void moveLeft() {
     if (currentColumn > 0) {
       currentColumn--;
-      position.x = (currentColumn * CarmoleGame.cellSize) + (CarmoleGame.cellSize / 2) - 30;
+      // Center crane over the column (grid is now centered at origin)
+      position.x = (currentColumn - (CarmoleGame.gridWidth - 1) / 2) * CarmoleGame.cellSize;
     }
   }
 
   void moveRight() {
     if (currentColumn < CarmoleGame.gridWidth - 1) {
       currentColumn++;
-      position.x = (currentColumn * CarmoleGame.cellSize) + (CarmoleGame.cellSize / 2) - 30;
+      // Center crane over the column (grid is now centered at origin)
+      position.x = (currentColumn - (CarmoleGame.gridWidth - 1) / 2) * CarmoleGame.cellSize;
     }
   }
 }

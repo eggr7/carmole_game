@@ -28,8 +28,8 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   Future<void> onLoad() async {
     super.onLoad();
     
-    // Initialize camera with fixed resolution
-    camera.viewfinder.anchor = Anchor.topLeft;
+    // Initialize camera with fixed resolution and center the view
+    camera.viewfinder.anchor = Anchor.center;
     
     // Initialize game components
     gameState = GameStateManager();
@@ -41,16 +41,18 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     world.add(crane);
     
     // Add score display
+    final double gridWidthPixels = CarmoleGame.gridWidth * cellSize;
+    final double gridHeightPixels = CarmoleGame.gridHeight * cellSize;
     scoreText = TextComponent(
       text: 'Score: 0',
-      position: Vector2(10, 10),
+      position: Vector2(-gridWidthPixels/2 + 10, -gridHeightPixels/2 + 10),
     );
     world.add(scoreText);
     
     // Add game over display
     gameOverText = TextComponent(
       text: 'Game Over',
-      position: Vector2(size.x / 2, size.y / 2 - 50),
+      position: Vector2(0, -50),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -65,7 +67,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     restartButton = CustomButtonComponent(
       text: 'Restart',
       onPressed: restartGame,
-      position: Vector2(size.x / 2, size.y / 2 + 50),
+      position: Vector2(0, 50),
       size: Vector2(200, 50),
     )..anchor = Anchor.center;
     
@@ -77,11 +79,8 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     // Initialize grid with empty cells
     gameGrid.initializeGrid();
     
-    // Position crane at top center
-    crane.position = Vector2(
-      (gridWidth * cellSize) / 2 - 30,
-      -100
-    );
+    // Position crane at top center of the grid
+    crane.position = Vector2(0, -120);
   }
   
   @override
