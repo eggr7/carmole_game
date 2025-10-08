@@ -53,7 +53,14 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     // Add score display
     scoreText = TextComponent(
       text: 'Score: 0',
-      position: Vector2(-180, -280),
+      position: Vector2(-180, -275),
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
     world.add(scoreText);
     
@@ -88,7 +95,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     gameGrid.initializeGrid();
     
     // Position crane at top center of the grid
-    crane.position = Vector2(0, -280);
+    crane.position = Vector2(0, -255);
   }
   
   @override
