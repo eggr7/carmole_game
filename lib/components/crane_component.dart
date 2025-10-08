@@ -7,6 +7,7 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
   bool isDropping = false;
   int currentColumn = 3; // Start in middle
   bool isFlipped = false; // Track flip state
+  CarComponent? nextCar; // Preview car hanging from crane
 
   CraneComponent()
       : super(
@@ -21,10 +22,13 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
     
     // Keep crane at full 100x100 pixel size without scaling
     scale = Vector2.all(1.0);
+    
+    // Generate the first preview car
+    generateNextCar();
   }
 
   void dropCar() {
-    if (isDropping) return;
+    if (isDropping || nextCar == null) return;
 
     isDropping = true;
 
@@ -38,11 +42,16 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
     }
 
     if (targetRow != -1) {
-      // Create new car
-      final newCar = CarComponent(carColor: CarComponent.getRandomColor());
+      // Use the preview car's color for the dropped car
+      final carColor = nextCar!.carColor;
+      final newCar = CarComponent(carColor: carColor);
       // Place car in grid
       game.gameGrid.placeCar(newCar, targetRow, currentColumn);
       print('Car dropped in column $currentColumn, row $targetRow');
+      
+      // Generate next preview car
+      generateNextCar();
+      
       // Check for matches after a short delay
       Future.delayed(const Duration(milliseconds: 200), () {
         game.gameGrid.checkForMatches();
@@ -84,5 +93,18 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       flipHorizontallyAroundCenter();
       isFlipped = shouldFlip;
     }
+  }
+
+  void generateNextCar() {
+    // Remove old preview if exists
+    if (nextCar != null) {
+      nextCar!.removeFromParent();
+    }
+    
+    // Create new preview car
+    nextCar = CarComponent(carColor: CarComponent.getRandomColor());
+    nextCar!.position = Vector2(0, 60); // Position below crane
+    nextCar!.size = Vector2.all(40); // Make preview car slightly smaller
+    add(nextCar!); // Add as child of crane
   }
 }

@@ -55,7 +55,8 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     // Add score display
     scoreText = TextComponent(
       text: 'Score: 0',
-      position: Vector2(-180, -275),
+      position: Vector2(0, 300),
+      anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.black,
