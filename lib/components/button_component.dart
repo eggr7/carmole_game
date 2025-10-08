@@ -25,7 +25,8 @@ class CustomButtonComponent extends PositionComponent with TapCallbacks {
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 24,
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
         ),
       ),
       anchor: Anchor.center,

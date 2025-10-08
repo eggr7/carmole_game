@@ -23,6 +23,8 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   late TextComponent scoreText;
   late TextComponent gameOverText;
   late CustomButtonComponent restartButton;
+  late CustomButtonComponent leftButton;
+  late CustomButtonComponent rightButton;
   
   @override
   Future<void> onLoad() async {
@@ -85,6 +87,24 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
       position: Vector2(0, 50),
       size: Vector2(200, 50),
     )..anchor = Anchor.center;
+    
+    // Add control buttons below the grid
+    final double gridBottomY = (CarmoleGame.gridHeight * cellSize) / 2;
+    leftButton = CustomButtonComponent(
+      text: '←',
+      onPressed: () => crane.moveLeft(),
+      position: Vector2(-50, gridBottomY + 60),
+      size: Vector2(80, 80),
+    )..anchor = Anchor.center;
+    world.add(leftButton);
+    
+    rightButton = CustomButtonComponent(
+      text: '→',
+      onPressed: () => crane.moveRight(),
+      position: Vector2(50, gridBottomY + 60),
+      size: Vector2(80, 80),
+    )..anchor = Anchor.center;
+    world.add(rightButton);
     
     // Start the game
     await _initializeGame();

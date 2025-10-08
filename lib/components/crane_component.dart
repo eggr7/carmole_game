@@ -6,6 +6,7 @@ import 'car_component.dart';
 class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> {
   bool isDropping = false;
   int currentColumn = 3; // Start in middle
+  bool isFlipped = false; // Track flip state
 
   CraneComponent()
       : super(
@@ -41,6 +42,7 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       final newCar = CarComponent(carColor: CarComponent.getRandomColor());
       // Place car in grid
       game.gameGrid.placeCar(newCar, targetRow, currentColumn);
+      print('Car dropped in column $currentColumn, row $targetRow');
       // Check for matches after a short delay
       Future.delayed(const Duration(milliseconds: 200), () {
         game.gameGrid.checkForMatches();
@@ -59,6 +61,8 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       currentColumn--;
       // Center crane over the column (grid is now centered at origin)
       position.x = (currentColumn - (CarmoleGame.gridWidth - 1) / 2) * CarmoleGame.cellSize;
+      updateFlip();
+      print('Crane moved left to column $currentColumn, position.x = ${position.x}');
     }
   }
 
@@ -67,6 +71,18 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       currentColumn++;
       // Center crane over the column (grid is now centered at origin)
       position.x = (currentColumn - (CarmoleGame.gridWidth - 1) / 2) * CarmoleGame.cellSize;
+      updateFlip();
+      print('Crane moved right to column $currentColumn, position.x = ${position.x}');
+    }
+  }
+
+  void updateFlip() {
+    // Flip if on left half of grid (columns 0, 1, 2)
+    final bool shouldFlip = currentColumn < CarmoleGame.gridWidth / 2;
+    
+    if (shouldFlip != isFlipped) {
+      flipHorizontallyAroundCenter();
+      isFlipped = shouldFlip;
     }
   }
 }
