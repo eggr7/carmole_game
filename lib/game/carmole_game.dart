@@ -36,16 +36,24 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     gameGrid = GridComponent();
     crane = CraneComponent();
     
+    // Add light background for crane area
+    final double gridWidthPixels = CarmoleGame.gridWidth * cellSize;
+    final topBackground = RectangleComponent(
+      size: Vector2(gridWidthPixels, 100), // Full width, 100px tall
+      position: Vector2(-gridWidthPixels / 2, -330),
+      paint: Paint()..color = Colors.grey.shade100,
+      anchor: Anchor.topLeft,
+    );
+    world.add(topBackground);
+    
     // Add components to the world
     world.add(gameGrid);
     world.add(crane);
     
     // Add score display
-    final double gridWidthPixels = CarmoleGame.gridWidth * cellSize;
-    final double gridHeightPixels = CarmoleGame.gridHeight * cellSize;
     scoreText = TextComponent(
       text: 'Score: 0',
-      position: Vector2(-gridWidthPixels/2 + 10, -gridHeightPixels/2 + 10),
+      position: Vector2(-180, -280),
     );
     world.add(scoreText);
     
@@ -80,7 +88,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     gameGrid.initializeGrid();
     
     // Position crane at top center of the grid
-    crane.position = Vector2(0, -120);
+    crane.position = Vector2(0, -280);
   }
   
   @override

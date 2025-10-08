@@ -9,7 +9,7 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
 
   CraneComponent()
       : super(
-          size: Vector2(120, 120),
+          size: Vector2(100, 100),
           anchor: Anchor.center,
         );
 
@@ -18,9 +18,8 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
     super.onLoad();
     sprite = await game.loadSprite('crane_sprite.png');
     
-    // Scale the crane sprite to 120x120 pixels (assuming original is ~500x500)
-    final double scaleFactor = 120.0 / 500.0;
-    scale = Vector2.all(scaleFactor);
+    // Keep crane at full 100x100 pixel size without scaling
+    scale = Vector2.all(1.0);
   }
 
   void dropCar() {
