@@ -33,20 +33,20 @@ Carmole is a Flame-based 2D puzzle game inspired by titles like Candy Crush, but
 
 2. Folder Structure
 
-carmole_game/
-├── assets/
-│   └── images/
-├── lib/
-│   ├── components/
-│   │   ├── car_component.dart
-│   │   ├── crane_component.dart
-│   │   └── grid_component.dart
-│   ├── game/
-│   │   ├── carmole_game.dart
-│   │   └── game_state_manager.dart
-│   └── main.dart
-├── pubspec.yaml
-└── README.md
+    carmole_game/
+    ├── assets/
+    │   └── images/
+    ├── lib/
+    │   ├── components/
+    │   │   ├── car_component.dart
+    │   │   ├── crane_component.dart
+    │   │   └── grid_component.dart
+    │   ├── game/
+    │   │   ├── carmole_game.dart
+    │   │   └── game_state_manager.dart
+    │   └── main.dart
+    ├── pubspec.yaml
+    └── README.md
 
 3. Running the Game (Windows Desktop)
 Make sure Windows desktop support is enabled:
@@ -109,11 +109,9 @@ Flutter (UI Framework)
 Flame (Lightweight game engine for Flutter)
 
 ## 📸 Current Progress
-The grid is rendered on the left.
-
-The first car drops (or should drop) by the crane by default.
-
-Tap detection allows dropping additional cars.
+- Grid is centered and fully interactive.
+- Crane shows a preview car aligned to the hook side. When the crane flips left/right, the preview stays under the hook. Dropped cars now keep a neutral orientation (no accidental mirroring).
+- Tap anywhere to drop the preview car in the current column.
 
 ## 📚 References & Inspiration
 Flame Engine Documentation
@@ -121,14 +119,14 @@ Flame Engine Documentation
 Flutter Official Docs
 
 ## 📝 TODO
-Implement animation for moving the crane left and right
+- Implement smooth animation for crane movement
+- Add collision/match logic to clear cars (4+ in a line)
+- Display score, level, and match counters in HUD
+- Add sound and particle effects
+- Refine car sprites and visual polish
 
-Add collision and match logic for clearing cars
+## License
 
-Display score and match counters
-
-Add sound and particle effects
-
-Refine car sprites and visual effects
+This project is licensed under the MIT License. See the `LICENSE` file for details.
 
 ### * Feel free to contribute, report bugs, or suggest features! *

@@ -8,6 +8,9 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
   int currentColumn = 3; // Start in middle
   bool isFlipped = false; // Track flip state
   CarComponent? nextCar; // Preview car hanging from crane
+  // Horizontal offsets to align preview car under the hook in each orientation
+  static const double hookOffsetXNotFlipped = 64; // When crane faces right (columns 3-5)
+  static const double hookOffsetXFlipped = 61; // When crane faces left (columns 0-2)
 
   CraneComponent()
       : super(
@@ -45,6 +48,9 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       // Use the preview car's color for the dropped car
       final carColor = nextCar!.carColor;
       final newCar = CarComponent(carColor: carColor);
+      // Ensure neutral orientation for dropped car
+      newCar.angle = 0;
+      newCar.scale = Vector2.all(1);
       // Place car in grid
       game.gameGrid.placeCar(newCar, targetRow, currentColumn);
       print('Car dropped in column $currentColumn, row $targetRow');
@@ -92,6 +98,13 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
     if (shouldFlip != isFlipped) {
       flipHorizontallyAroundCenter();
       isFlipped = shouldFlip;
+      // Update preview car position to stay under hook side after flipping
+      if (nextCar != null) {
+        nextCar!.position = Vector2(
+          isFlipped ? hookOffsetXFlipped : hookOffsetXNotFlipped,
+          nextCar!.position.y,
+        );
+      }
     }
   }
 
@@ -103,7 +116,11 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
     
     // Create new preview car
     nextCar = CarComponent(carColor: CarComponent.getRandomColor());
-    nextCar!.position = Vector2(0, 60); // Position below crane
+    // Position under the hook; different offsets for each crane orientation
+    nextCar!.position = Vector2(
+      isFlipped ? hookOffsetXFlipped : hookOffsetXNotFlipped,
+      60,
+    );
     nextCar!.size = Vector2.all(40); // Make preview car slightly smaller
     add(nextCar!); // Add as child of crane
   }
