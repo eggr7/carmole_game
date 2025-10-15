@@ -14,7 +14,9 @@ class LeaderboardService {
     for (final s in list) {
       final parsed = int.tryParse(s);
       if (parsed != null) {
-        scores.add(parsed);
+        if (parsed > 0) {
+          scores.add(parsed);
+        }
       }
     }
     scores.sort((a, b) => b.compareTo(a));
@@ -25,6 +27,9 @@ class LeaderboardService {
   }
 
   Future<void> addScore(int score) async {
+    if (score <= 0) {
+      return; // Do not store zero or negative scores
+    }
     final prefs = await _prefs();
     final existing = await loadScores();
     existing.add(score);

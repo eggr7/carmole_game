@@ -24,13 +24,19 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   late TextComponent scoreText;
   late TextComponent gameOverText;
   TextComponent? finalScoreText;
+  TextComponent? topMessageText;
   late CustomButtonComponent restartButton;
   late CustomButtonComponent leftButton;
   late CustomButtonComponent rightButton;
+  late CustomButtonComponent nextButton;
   RectangleComponent? leaderboardPanel;
   final List<TextComponent> _leaderboardItems = [];
   bool _gameOverHandled = false;
+  bool _showingLeaderboard = false;
   final LeaderboardService _leaderboardService = LeaderboardService();
+  List<int>? _cachedScores;
+  RectangleComponent? _dimOverlay;
+  RectangleComponent? _gameOverPanel;
   
   @override
   Future<void> onLoad() async {
@@ -76,7 +82,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     // Add game over display
     gameOverText = TextComponent(
       text: 'Game Over',
-      position: Vector2(0, -50),
+      position: Vector2(0, -140),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
@@ -91,7 +97,15 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     restartButton = CustomButtonComponent(
       text: 'Restart',
       onPressed: restartGame,
-      position: Vector2(0, 50),
+      position: Vector2(0, 180),
+      size: Vector2(200, 50),
+    )..anchor = Anchor.center;
+
+    // Add next button (initially unused; shown on Game Over step 1)
+    nextButton = CustomButtonComponent(
+      text: 'Next',
+      onPressed: _showLeaderboard,
+      position: Vector2(0, 120),
       size: Vector2(200, 50),
     )..anchor = Anchor.center;
     
@@ -159,38 +173,86 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
       world.remove(finalScoreText!);
       finalScoreText = null;
     }
+    if (topMessageText != null) {
+      world.remove(topMessageText!);
+      topMessageText = null;
+    }
     if (leaderboardPanel != null) {
       world.remove(leaderboardPanel!);
       leaderboardPanel = null;
+    }
+    if (_gameOverPanel != null) {
+      world.remove(_gameOverPanel!);
+      _gameOverPanel = null;
+    }
+    if (_dimOverlay != null) {
+      world.remove(_dimOverlay!);
+      _dimOverlay = null;
     }
     for (final item in _leaderboardItems) {
       world.remove(item);
     }
     _leaderboardItems.clear();
+    if (world.contains(nextButton)) {
+      world.remove(nextButton);
+    }
+    _cachedScores = null;
+    _showingLeaderboard = false;
     _gameOverHandled = false;
+
+    // Reset positions for next session
+    gameOverText.position = Vector2(0, -140);
+    restartButton.position = Vector2(0, 180);
+    nextButton.position = Vector2(0, 120);
   }
 
   Future<void> _handleGameOver() async {
-    // Persist final score and load the Top 10 leaderboard
+    // Persist final score and prepare data
     await _leaderboardService.addScore(gameState.score);
     final scores = await _leaderboardService.loadScores();
+    _cachedScores = scores;
 
-    // Ensure Game Over title and Restart button are visible
+    // Create dim overlay and panel for contrast
+    final double gridWidthPixels = CarmoleGame.gridWidth * cellSize;
+    final double gridHeightPixels = CarmoleGame.gridHeight * cellSize;
+    _dimOverlay = RectangleComponent(
+      size: Vector2(gridWidthPixels + 220, gridHeightPixels + 360),
+      position: Vector2(-(gridWidthPixels + 220) / 2, -(gridHeightPixels + 360) / 2),
+      paint: Paint()..color = Colors.black.withOpacity(0.4),
+      anchor: Anchor.topLeft,
+    );
+    world.add(_dimOverlay!);
+
+    _gameOverPanel = RectangleComponent(
+      size: Vector2(320, 230),
+      position: Vector2(-160, -170),
+      paint: Paint()..color = Colors.white.withOpacity(0.92),
+      anchor: Anchor.topLeft,
+    );
+    world.add(_gameOverPanel!);
+
+    // Ensure Game Over title and Restart/Next are visible and positioned
+    gameOverText.position = Vector2(0, -120);
     if (!world.contains(gameOverText)) {
       world.add(gameOverText);
     }
+    restartButton.position = Vector2(0, 160);
     if (!world.contains(restartButton)) {
       world.add(restartButton);
     }
+    nextButton.position = Vector2(0, 110);
+    if (!world.contains(nextButton)) {
+      world.add(nextButton);
+    }
 
-    // Show final score text below the Game Over title
+    // Step 1: show final score and optional top message
     finalScoreText = TextComponent(
       text: 'Score: ${gameState.score}',
-      position: Vector2(0, 10),
+      position: Vector2(0, -60),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
-          fontSize: 28,
+          fontSize: 32,
           color: Colors.black,
           fontWeight: FontWeight.bold,
         ),
@@ -198,24 +260,76 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     );
     world.add(finalScoreText!);
 
-    // Draw a panel and list the Top 10 scores
-    final double panelWidth = 260;
-    final double panelHeight = 280;
+    // Compute rank in Top 10 and show message if applicable
+    final rank = scores.indexWhere((s) => s == gameState.score);
+    final inTop = rank >= 0 && rank < 10;
+    if (inTop) {
+      topMessageText = TextComponent(
+        text: 'You made Top #${rank + 1}',
+        position: Vector2(0, -20),
+        anchor: Anchor.center,
+        textRenderer: TextPaint(
+          style: const TextStyle(
+            fontSize: 22,
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+      world.add(topMessageText!);
+    }
+  }
+
+  Future<void> _showLeaderboard() async {
+    if (_showingLeaderboard) return;
+    _showingLeaderboard = true;
+
+    // Hide step 1 messages and panel
+    if (finalScoreText != null) {
+      world.remove(finalScoreText!);
+      finalScoreText = null;
+    }
+    if (topMessageText != null) {
+      world.remove(topMessageText!);
+      topMessageText = null;
+    }
+    if (_gameOverPanel != null) {
+      world.remove(_gameOverPanel!);
+      _gameOverPanel = null;
+    }
+    if (world.contains(nextButton)) {
+      world.remove(nextButton);
+    }
+
+    // Keep dim overlay for contrast
+    if (_dimOverlay == null) {
+      final double gridWidthPixels = CarmoleGame.gridWidth * cellSize;
+      final double gridHeightPixels = CarmoleGame.gridHeight * cellSize;
+      _dimOverlay = RectangleComponent(
+        size: Vector2(gridWidthPixels + 220, gridHeightPixels + 360),
+        position: Vector2(-(gridWidthPixels + 220) / 2, -(gridHeightPixels + 360) / 2),
+        paint: Paint()..color = Colors.black.withOpacity(0.4),
+        anchor: Anchor.topLeft,
+      );
+      world.add(_dimOverlay!);
+    }
+
+    // Draw panel and list the Top 10 scores
     leaderboardPanel = RectangleComponent(
-      size: Vector2(panelWidth, panelHeight),
-      position: Vector2(-panelWidth / 2, 110),
-      paint: Paint()..color = Colors.white.withOpacity(0.9),
+      size: Vector2(320, 300),
+      position: Vector2(-160, -120),
+      paint: Paint()..color = Colors.white.withOpacity(0.92),
       anchor: Anchor.topLeft,
     );
     world.add(leaderboardPanel!);
 
     final title = TextComponent(
       text: 'Top 10',
-      position: Vector2(0, 120),
+      position: Vector2(0, -100),
       anchor: Anchor.topCenter,
       textRenderer: TextPaint(
         style: const TextStyle(
-          fontSize: 24,
+          fontSize: 26,
           color: Colors.black,
           fontWeight: FontWeight.w600,
         ),
@@ -224,11 +338,12 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     world.add(title);
     _leaderboardItems.add(title);
 
-    const double rowHeight = 22;
+    final scores = _cachedScores ?? await _leaderboardService.loadScores();
+    const double rowHeight = 24;
     for (int i = 0; i < scores.length && i < 10; i++) {
       final line = TextComponent(
         text: '${i + 1}. ${scores[i]}',
-        position: Vector2(0, 150 + i * rowHeight),
+        position: Vector2(0, -70 + i * rowHeight),
         anchor: Anchor.topCenter,
         textRenderer: TextPaint(
           style: const TextStyle(
@@ -239,6 +354,12 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
       );
       world.add(line);
       _leaderboardItems.add(line);
+    }
+
+    // Keep restart button visible under panel
+    restartButton.position = Vector2(0, 200);
+    if (!world.contains(restartButton)) {
+      world.add(restartButton);
     }
   }
 
