@@ -11,6 +11,7 @@ import '../components/grid_component.dart';
 import '../components/crane_component.dart';
 import '../components/button_component.dart';
 import 'game_state_manager.dart';
+import '../services/leaderboard_service.dart';
 
 class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, KeyboardHandler {
   static const int gridWidth = 6;
@@ -22,9 +23,14 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   late GameStateManager gameState;
   late TextComponent scoreText;
   late TextComponent gameOverText;
+  TextComponent? finalScoreText;
   late CustomButtonComponent restartButton;
   late CustomButtonComponent leftButton;
   late CustomButtonComponent rightButton;
+  RectangleComponent? leaderboardPanel;
+  final List<TextComponent> _leaderboardItems = [];
+  bool _gameOverHandled = false;
+  final LeaderboardService _leaderboardService = LeaderboardService();
   
   @override
   Future<void> onLoad() async {
@@ -52,14 +58,14 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     world.add(gameGrid);
     world.add(crane);
     
-    // Add score display
+    // Add score display next to control buttons
     scoreText = TextComponent(
       text: 'Score: 0',
-      position: Vector2(0, 300),
+      position: Vector2(-150, (CarmoleGame.gridHeight * cellSize) / 2 + 60), // Left side of control buttons
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
-          color: Colors.black,
+          color: Colors.green,
           fontSize: 24,
           fontWeight: FontWeight.bold,
         ),
@@ -137,11 +143,9 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     super.update(dt);
     scoreText.text = 'Score: ${gameState.score}';
 
-    if (gameState.isGameOver) {
-      if (!world.contains(gameOverText)) {
-        world.add(gameOverText);
-        world.add(restartButton);
-      }
+    if (gameState.isGameOver && !_gameOverHandled) {
+      _gameOverHandled = true;
+      _handleGameOver();
     }
   }
 
@@ -151,6 +155,91 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     gameGrid.initializeGrid();
     world.remove(gameOverText);
     world.remove(restartButton);
+    if (finalScoreText != null) {
+      world.remove(finalScoreText!);
+      finalScoreText = null;
+    }
+    if (leaderboardPanel != null) {
+      world.remove(leaderboardPanel!);
+      leaderboardPanel = null;
+    }
+    for (final item in _leaderboardItems) {
+      world.remove(item);
+    }
+    _leaderboardItems.clear();
+    _gameOverHandled = false;
+  }
+
+  Future<void> _handleGameOver() async {
+    // Persist final score and load the Top 10 leaderboard
+    await _leaderboardService.addScore(gameState.score);
+    final scores = await _leaderboardService.loadScores();
+
+    // Ensure Game Over title and Restart button are visible
+    if (!world.contains(gameOverText)) {
+      world.add(gameOverText);
+    }
+    if (!world.contains(restartButton)) {
+      world.add(restartButton);
+    }
+
+    // Show final score text below the Game Over title
+    finalScoreText = TextComponent(
+      text: 'Score: ${gameState.score}',
+      position: Vector2(0, 10),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          fontSize: 28,
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+    world.add(finalScoreText!);
+
+    // Draw a panel and list the Top 10 scores
+    final double panelWidth = 260;
+    final double panelHeight = 280;
+    leaderboardPanel = RectangleComponent(
+      size: Vector2(panelWidth, panelHeight),
+      position: Vector2(-panelWidth / 2, 110),
+      paint: Paint()..color = Colors.white.withOpacity(0.9),
+      anchor: Anchor.topLeft,
+    );
+    world.add(leaderboardPanel!);
+
+    final title = TextComponent(
+      text: 'Top 10',
+      position: Vector2(0, 120),
+      anchor: Anchor.topCenter,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          fontSize: 24,
+          color: Colors.black,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+    world.add(title);
+    _leaderboardItems.add(title);
+
+    const double rowHeight = 22;
+    for (int i = 0; i < scores.length && i < 10; i++) {
+      final line = TextComponent(
+        text: '${i + 1}. ${scores[i]}',
+        position: Vector2(0, 150 + i * rowHeight),
+        anchor: Anchor.topCenter,
+        textRenderer: TextPaint(
+          style: const TextStyle(
+            fontSize: 18,
+            color: Colors.black87,
+          ),
+        ),
+      );
+      world.add(line);
+      _leaderboardItems.add(line);
+    }
   }
 
   @override
