@@ -18,7 +18,7 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
         CarmoleGame.gridWidth * CarmoleGame.cellSize,
         CarmoleGame.gridHeight * CarmoleGame.cellSize,
       ),
-      paint: Paint()..color = Colors.grey.shade800,
+      paint: Paint()..color = Colors.transparent,
       position: Vector2(
         -(CarmoleGame.gridWidth * CarmoleGame.cellSize) / 2,
         -(CarmoleGame.gridHeight * CarmoleGame.cellSize) / 2,

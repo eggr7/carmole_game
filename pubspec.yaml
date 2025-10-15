@@ -67,6 +67,7 @@ flutter:
     - assets/images/car_purple.png
     - assets/images/car_orange.png
     - assets/images/crane_sprite.png
+    - assets/images/junkyard_bg.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
