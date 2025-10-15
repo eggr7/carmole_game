@@ -49,7 +49,7 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
     for (int i = 0; i <= CarmoleGame.gridWidth; i++) {
       final line = RectangleComponent(
         size: Vector2(2, CarmoleGame.gridHeight * CarmoleGame.cellSize),
-        paint: Paint()..color = Colors.white24,
+        paint: Paint()..color = Colors.white38,
         position: Vector2(gridStartX + i * CarmoleGame.cellSize, gridStartY),
         anchor: Anchor.topLeft,
       );
@@ -60,7 +60,7 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
     for (int i = 0; i <= CarmoleGame.gridHeight; i++) {
       final line = RectangleComponent(
         size: Vector2(CarmoleGame.gridWidth * CarmoleGame.cellSize, 2),
-        paint: Paint()..color = Colors.white24,
+        paint: Paint()..color = Colors.white38,
         position: Vector2(gridStartX, gridStartY + i * CarmoleGame.cellSize),
         anchor: Anchor.topLeft,
       );

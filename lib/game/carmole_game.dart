@@ -53,14 +53,16 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     crane = CraneComponent();
     
     // Background: junkyard image behind the grid and crane
-    final double bgW = CarmoleGame.gridWidth * cellSize + 220;
-    final double bgH = CarmoleGame.gridHeight * cellSize + 360;
+    final double scale = 0.92;
+    final double bgW = (CarmoleGame.gridWidth * cellSize + 220) * scale;
+    final double bgH = (CarmoleGame.gridHeight * cellSize + 360) * scale;
     final SpriteComponent bg = SpriteComponent(
       sprite: await loadSprite('junkyard_bg.png'),
       size: Vector2(bgW, bgH),
       position: Vector2(-bgW / 2, -bgH / 2),
       anchor: Anchor.topLeft,
-    )..priority = -10;
+    )..priority = -10
+     ..opacity = 0.8;
     world.add(bg);
     
     // Add light background for crane area
@@ -68,7 +70,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     final topBackground = RectangleComponent(
       size: Vector2(gridWidthPixels, 100), // Full width, 100px tall
       position: Vector2(-gridWidthPixels / 2, -330),
-      paint: Paint()..color = Colors.grey.shade100,
+      paint: Paint()..color = Colors.black.withOpacity(0.55),
       anchor: Anchor.topLeft,
     );
     world.add(topBackground);
