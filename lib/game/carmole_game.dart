@@ -29,6 +29,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   late CustomButtonComponent leftButton;
   late CustomButtonComponent rightButton;
   late CustomButtonComponent nextButton;
+  late CustomButtonComponent backButton;
   RectangleComponent? leaderboardPanel;
   final List<TextComponent> _leaderboardItems = [];
   bool _gameOverHandled = false;
@@ -37,6 +38,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   List<int>? _cachedScores;
   RectangleComponent? _dimOverlay;
   RectangleComponent? _gameOverPanel;
+  int _lastRank = -1;
   
   @override
   Future<void> onLoad() async {
@@ -106,6 +108,14 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
       text: 'Next',
       onPressed: _showLeaderboard,
       position: Vector2(0, 120),
+      size: Vector2(200, 50),
+    )..anchor = Anchor.center;
+
+    // Back button used on leaderboard to return to summary
+    backButton = CustomButtonComponent(
+      text: 'Back',
+      onPressed: _showSummary,
+      position: Vector2(0, 200),
       size: Vector2(200, 50),
     )..anchor = Anchor.center;
     
@@ -196,14 +206,19 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     if (world.contains(nextButton)) {
       world.remove(nextButton);
     }
+    if (world.contains(backButton)) {
+      world.remove(backButton);
+    }
     _cachedScores = null;
     _showingLeaderboard = false;
     _gameOverHandled = false;
-
+    
     // Reset positions for next session
     gameOverText.position = Vector2(0, -140);
     restartButton.position = Vector2(0, 180);
     nextButton.position = Vector2(0, 120);
+    backButton.position = Vector2(0, 200);
+    _lastRank = -1;
   }
 
   Future<void> _handleGameOver() async {
@@ -262,6 +277,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
 
     // Compute rank in Top 10 and show message if applicable
     final rank = scores.indexWhere((s) => s == gameState.score);
+    _lastRank = rank;
     final inTop = rank >= 0 && rank < 10;
     if (inTop) {
       topMessageText = TextComponent(
@@ -341,6 +357,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     final scores = _cachedScores ?? await _leaderboardService.loadScores();
     const double rowHeight = 24;
     for (int i = 0; i < scores.length && i < 10; i++) {
+      final isCurrent = i == _lastRank && _lastRank >= 0;
       final line = TextComponent(
         text: '${i + 1}. ${scores[i]}',
         position: Vector2(0, -70 + i * rowHeight),
@@ -352,12 +369,93 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
           ),
         ),
       );
+      if (isCurrent) {
+        line.textRenderer = TextPaint(
+          style: const TextStyle(
+            fontSize: 18,
+            color: Colors.blue,
+            fontWeight: FontWeight.w700,
+          ),
+        );
+      }
       world.add(line);
       _leaderboardItems.add(line);
     }
 
+    // Show Back to allow returning to summary
+    backButton.position = Vector2(0, 200);
+    if (!world.contains(backButton)) {
+      world.add(backButton);
+    }
+
     // Keep restart button visible under panel
-    restartButton.position = Vector2(0, 200);
+    restartButton.position = Vector2(0, 200 + 60);
+    if (!world.contains(restartButton)) {
+      world.add(restartButton);
+    }
+  }
+
+  Future<void> _showSummary() async {
+    if (!_showingLeaderboard) return;
+    _showingLeaderboard = false;
+
+    // Remove leaderboard elements
+    if (leaderboardPanel != null) {
+      world.remove(leaderboardPanel!);
+      leaderboardPanel = null;
+    }
+    for (final item in _leaderboardItems) {
+      world.remove(item);
+    }
+    _leaderboardItems.clear();
+    if (world.contains(backButton)) {
+      world.remove(backButton);
+    }
+
+    // Recreate summary texts
+    final scores = _cachedScores ?? await _leaderboardService.loadScores();
+    gameOverText.position = Vector2(0, -120);
+    if (!world.contains(gameOverText)) {
+      world.add(gameOverText);
+    }
+    finalScoreText = TextComponent(
+      text: 'Score: ${gameState.score}',
+      position: Vector2(0, -60),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          fontSize: 32,
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+    world.add(finalScoreText!);
+
+    final rank = scores.indexWhere((s) => s == gameState.score);
+    final inTop = rank >= 0 && rank < 10;
+    if (inTop) {
+      topMessageText = TextComponent(
+        text: 'You made Top #${rank + 1}',
+        position: Vector2(0, -20),
+        anchor: Anchor.center,
+        textRenderer: TextPaint(
+          style: const TextStyle(
+            fontSize: 22,
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+      world.add(topMessageText!);
+    }
+
+    // Show Next and Restart again
+    nextButton.position = Vector2(0, 110);
+    if (!world.contains(nextButton)) {
+      world.add(nextButton);
+    }
+    restartButton.position = Vector2(0, 160);
     if (!world.contains(restartButton)) {
       world.add(restartButton);
     }
