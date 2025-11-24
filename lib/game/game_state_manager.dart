@@ -3,6 +3,7 @@ class GameStateManager {
   int level = 1;
   int carsCleared = 0;
   bool isGameOver = false;
+  bool isPaused = false;
   
   void addScore(int points) {
     score += points;
@@ -24,10 +25,26 @@ class GameStateManager {
     addScore(50 + bonus);
   }
   
+  void pauseGame() {
+    if (!isGameOver) {
+      isPaused = true;
+    }
+  }
+  
+  void resumeGame() {
+    isPaused = false;
+  }
+  
+  void togglePause() {
+    if (isGameOver) return;
+    isPaused = !isPaused;
+  }
+  
   void reset() {
     score = 0;
     level = 1;
     carsCleared = 0;
     isGameOver = false;
+    isPaused = false;
   }
 }

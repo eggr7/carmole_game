@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../components/grid_component.dart';
 import '../components/crane_component.dart';
 import '../components/button_component.dart';
+import '../components/pause_menu_component.dart';
 import 'game_state_manager.dart';
 import '../services/leaderboard_service.dart';
 
@@ -17,6 +18,8 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   static const int gridWidth = 6;
   static const int gridHeight = 8;
   static const double cellSize = 60.0;
+  
+  final VoidCallback? onReturnToMenu;
   
   late GridComponent gameGrid;
   late CraneComponent crane;
@@ -30,6 +33,8 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   late CustomButtonComponent rightButton;
   late CustomButtonComponent nextButton;
   late CustomButtonComponent backButton;
+  late CustomButtonComponent menuButton;
+  late CustomButtonComponent pauseButton;
   RectangleComponent? leaderboardPanel;
   final List<TextComponent> _leaderboardItems = [];
   bool _gameOverHandled = false;
@@ -39,6 +44,9 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   RectangleComponent? _dimOverlay;
   RectangleComponent? _gameOverPanel;
   int _lastRank = -1;
+  PauseMenuComponent? _pauseMenu;
+  
+  CarmoleGame({this.onReturnToMenu});
   
   @override
   Future<void> onLoad() async {
@@ -131,6 +139,18 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
       position: Vector2(0, 200),
       size: Vector2(200, 50),
     )..anchor = Anchor.center;
+
+    // Menu button to return to main menu (shown during game over)
+    menuButton = CustomButtonComponent(
+      text: 'Menu',
+      onPressed: () {
+        if (onReturnToMenu != null) {
+          onReturnToMenu!();
+        }
+      },
+      position: Vector2(0, 220),
+      size: Vector2(200, 50),
+    )..anchor = Anchor.center;
     
     // Add control buttons below the grid
     final double gridBottomY = (CarmoleGame.gridHeight * cellSize) / 2;
@@ -150,6 +170,15 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     )..anchor = Anchor.center;
     world.add(rightButton);
     
+    // Add pause button (top-right corner)
+    pauseButton = CustomButtonComponent(
+      text: '||',
+      onPressed: _togglePause,
+      position: Vector2((CarmoleGame.gridWidth * cellSize) / 2 - 45, -(CarmoleGame.gridHeight * cellSize) / 2 + 45),
+      size: Vector2(70, 50),
+    )..anchor = Anchor.center;
+    world.add(pauseButton);
+    
     // Start the game
     await _initializeGame();
   }
@@ -162,6 +191,24 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     crane.position = Vector2(0, -255);
   }
   
+  void _togglePause() {
+    if (gameState.isGameOver) return;
+    
+    if (gameState.isPaused) {
+      // Resume
+      gameState.resumeGame();
+      if (_pauseMenu != null) {
+        _pauseMenu!.removeFromParent();
+        _pauseMenu = null;
+      }
+    } else {
+      // Pause
+      gameState.pauseGame();
+      _pauseMenu = PauseMenuComponent();
+      world.add(_pauseMenu!);
+    }
+  }
+
   @override
   void onTapDown(TapDownEvent event) {
     if (gameState.isGameOver) {
@@ -169,6 +216,9 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
         restartButton.onPressed.call();
       }
       return;
+    }
+    if (gameState.isPaused) {
+      return; // Ignore input when paused
     }
     super.onTapDown(event);
     // Trigger crane to drop a car
@@ -178,6 +228,12 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   @override
   void update(double dt) {
     super.update(dt);
+    
+    // Don't update game logic when paused
+    if (gameState.isPaused) {
+      return;
+    }
+    
     scoreText.text = 'Score: ${gameState.score}';
 
     if (gameState.isGameOver && !_gameOverHandled) {
@@ -222,9 +278,17 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     if (world.contains(backButton)) {
       world.remove(backButton);
     }
+    if (world.contains(menuButton)) {
+      world.remove(menuButton);
+    }
     _cachedScores = null;
     _showingLeaderboard = false;
     _gameOverHandled = false;
+    
+    // Re-enable pause button
+    if (world.contains(pauseButton)) {
+      pauseButton.setEnabled(true);
+    }
     
     // Reset positions for next session
     gameOverText.position = Vector2(0, -140);
@@ -235,6 +299,11 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   }
 
   Future<void> _handleGameOver() async {
+    // Hide pause button during game over
+    if (world.contains(pauseButton)) {
+      pauseButton.setEnabled(false);
+    }
+    
     // Persist final score and prepare data
     await _leaderboardService.addScore(gameState.score);
     final scores = await _leaderboardService.loadScores();
@@ -259,7 +328,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     );
     world.add(_gameOverPanel!);
 
-    // Ensure Game Over title and Restart/Next are visible and positioned
+    // Ensure Game Over title and Restart/Next/Menu are visible and positioned
     gameOverText.position = Vector2(0, -120);
     if (!world.contains(gameOverText)) {
       world.add(gameOverText);
@@ -268,9 +337,13 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     if (!world.contains(restartButton)) {
       world.add(restartButton);
     }
-    nextButton.position = Vector2(0, 110);
+    nextButton.position = Vector2(0, 100);
     if (!world.contains(nextButton)) {
       world.add(nextButton);
+    }
+    menuButton.position = Vector2(0, 220);
+    if (!world.contains(menuButton) && onReturnToMenu != null) {
+      world.add(menuButton);
     }
 
     // Step 1: show final score and optional top message
@@ -463,14 +536,18 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
       world.add(topMessageText!);
     }
 
-    // Show Next and Restart again
-    nextButton.position = Vector2(0, 110);
+    // Show Next, Restart, and Menu buttons
+    nextButton.position = Vector2(0, 100);
     if (!world.contains(nextButton)) {
       world.add(nextButton);
     }
     restartButton.position = Vector2(0, 160);
     if (!world.contains(restartButton)) {
       world.add(restartButton);
+    }
+    menuButton.position = Vector2(0, 220);
+    if (!world.contains(menuButton) && onReturnToMenu != null) {
+      world.add(menuButton);
     }
   }
 
@@ -482,7 +559,19 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     if (gameState.isGameOver) {
       return false;
     }
+    
     if (event is KeyDownEvent) {
+      // ESC key toggles pause
+      if (keysPressed.contains(LogicalKeyboardKey.escape)) {
+        _togglePause();
+        return true;
+      }
+      
+      // Don't allow game controls when paused
+      if (gameState.isPaused) {
+        return false;
+      }
+      
       if (keysPressed.contains(LogicalKeyboardKey.arrowLeft)) {
         crane.moveLeft();
         return true;
