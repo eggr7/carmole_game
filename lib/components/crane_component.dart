@@ -1,4 +1,5 @@
 import 'package:flame/components.dart';
+import 'dart:math' as math;
 // import 'package:flutter/material.dart';
 import '../game/carmole_game.dart';
 import 'car_component.dart';
@@ -11,6 +12,13 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
   // Horizontal offsets to align preview car under the hook in each orientation
   static const double hookOffsetXNotFlipped = 64; // When crane faces right (columns 3-5)
   static const double hookOffsetXFlipped = 61; // When crane faces left (columns 0-2)
+  
+  // Swing animation properties
+  double _swingTime = 0.0;
+  double _swingAmplitude = 0.08; // Swing angle in radians (~4.5 degrees)
+  double _swingSpeed = 2.0; // Oscillations per second
+  double _swingBoost = 0.0; // Extra swing when moving
+  double _swingBoostDecay = 3.0; // How fast boost decays
 
   CraneComponent()
       : super(
@@ -51,18 +59,34 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       // Ensure neutral orientation for dropped car
       newCar.angle = 0;
       newCar.scale = Vector2.all(1);
-      // Place car in grid
-      game.gameGrid.placeCar(newCar, targetRow, currentColumn);
+      
+      // Get crane's world position for starting the drop animation
+      final craneWorldPos = position;
+      final startPos = Vector2(craneWorldPos.x, craneWorldPos.y + 60); // Start below crane
+      
+      // Get target grid position
+      final targetPos = game.gameGrid.getCellPosition(targetRow, currentColumn);
+      
+      // Add car to world at crane position
+      newCar.position = startPos;
+      game.world.add(newCar);
+      
+      // Update grid reference immediately (but car will animate to position)
+      newCar.gridRow = targetRow;
+      newCar.gridCol = currentColumn;
+      game.gameGrid.grid[targetRow][currentColumn] = newCar;
+      
       print('Car dropped in column $currentColumn, row $targetRow');
       
-      // Generate next preview car
-      generateNextCar();
-      
-      // Check for matches after a short delay
-      Future.delayed(const Duration(milliseconds: 200), () {
+      // Animate the drop
+      newCar.animateDropFromCrane(targetPos, onComplete: () {
+        // Check for matches after drop completes
         game.gameGrid.checkForMatches();
         isDropping = false; // Reset for next drop
       });
+      
+      // Generate next preview car immediately
+      generateNextCar();
     } else {
       // Column is full, handle game over or prevent drop
       print("Column ${currentColumn} is full!");
@@ -77,6 +101,8 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       // Center crane over the column (grid is now centered at origin)
       position.x = (currentColumn - (CarmoleGame.gridWidth - 1) / 2) * CarmoleGame.cellSize;
       updateFlip();
+      // Boost swing when moving
+      _swingBoost = 0.15;
       print('Crane moved left to column $currentColumn, position.x = ${position.x}');
     }
   }
@@ -87,6 +113,8 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       // Center crane over the column (grid is now centered at origin)
       position.x = (currentColumn - (CarmoleGame.gridWidth - 1) / 2) * CarmoleGame.cellSize;
       updateFlip();
+      // Boost swing when moving
+      _swingBoost = 0.15;
       print('Crane moved right to column $currentColumn, position.x = ${position.x}');
     }
   }
@@ -123,5 +151,25 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
     );
     nextCar!.size = Vector2.all(40); // Make preview car slightly smaller
     add(nextCar!); // Add as child of crane
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    
+    // Update swing animation
+    _swingTime += dt;
+    
+    // Decay the boost over time
+    if (_swingBoost > 0) {
+      _swingBoost = math.max(0, _swingBoost - _swingBoostDecay * dt);
+    }
+    
+    // Apply pendulum swing to preview car
+    if (nextCar != null && !isDropping) {
+      final totalAmplitude = _swingAmplitude + _swingBoost;
+      final swingAngle = math.sin(_swingTime * _swingSpeed * 2 * math.pi) * totalAmplitude;
+      nextCar!.angle = swingAngle;
+    }
   }
 }

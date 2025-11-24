@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../game/carmole_game.dart';
@@ -90,13 +91,15 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
     return grid[row][col] == null;
   }
   
-  void placeCar(CarComponent car, int row, int col) {
+  void placeCar(CarComponent car, int row, int col, {bool addToParent = true}) {
     if (isValidPosition(row, col) && isCellEmpty(row, col)) {
       grid[row][col] = car;
       car.gridRow = row;
       car.gridCol = col;
       car.position = getCellPosition(row, col);
-      add(car);
+      if (addToParent) {
+        add(car);
+      }
     }
   }
   
@@ -180,8 +183,11 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
     if (clearedCars > 0) {
       game.gameState.carCleared();
       game.gameState.matchCleared(clearedCars);
+      // Apply gravity with animation after a brief delay
+      Future.delayed(const Duration(milliseconds: 100), () {
+        applyGravity();
+      });
     }
-    applyGravity();
   }
 
   void clearGrid() {
@@ -193,6 +199,8 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
   }
 
   void applyGravity() {
+    final List<Future<void>> animations = [];
+    
     for (int col = 0; col < CarmoleGame.gridWidth; col++) {
       for (int row = CarmoleGame.gridHeight - 2; row >= 0; row--) {
         final car = grid[row][col];
@@ -203,11 +211,37 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
             newRow++;
           }
           if (newRow != row) {
+            final targetPos = getCellPosition(newRow, col);
+            
+            // Update grid references
             grid[row][col] = null;
-            placeCar(car, newRow, col);
+            grid[newRow][col] = car;
+            car.gridRow = newRow;
+            car.gridCol = col;
+            
+            // Create a completer for this animation
+            final completer = Completer<void>();
+            animations.add(completer.future);
+            
+            // Animate the fall with staggered timing for cascade effect
+            final delay = (CarmoleGame.gridHeight - row) * 0.02; // Stagger by row
+            Future.delayed(Duration(milliseconds: (delay * 1000).toInt()), () {
+              car.animateFallToPosition(targetPos, onComplete: () {
+                completer.complete();
+              });
+            });
           }
         }
       }
+    }
+    
+    // When all animations complete, check for new matches
+    if (animations.isNotEmpty) {
+      Future.wait(animations).then((_) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          checkForMatches();
+        });
+      });
     }
   }
 }

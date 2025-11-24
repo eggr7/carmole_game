@@ -1,5 +1,6 @@
 import 'package:flame/components.dart';
 import 'package:flame/collisions.dart';
+import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../game/carmole_game.dart';
@@ -12,12 +13,20 @@ enum CarColor {
   orange,
 }
 
+enum CarState {
+  idle,
+  droppingFromCrane,
+  fallingFromGravity,
+  matched,
+}
+
 class CarComponent extends SpriteComponent with CollisionCallbacks, HasGameReference<CarmoleGame> {
   final CarColor carColor;
   int gridRow = -1;
   int gridCol = -1;
   bool isMatched = false;
   bool isFalling = false;
+  CarState state = CarState.idle;
 
   static final Map<CarColor, String> colorMap = {
     CarColor.red: 'car_red.png',
@@ -51,8 +60,47 @@ class CarComponent extends SpriteComponent with CollisionCallbacks, HasGameRefer
 
   void markAsMatched() {
     isMatched = true;
-    // Add visual feedback for matched cars
-    paint.color = Colors.black.withOpacity(0.5);
+    state = CarState.matched;
+    
+    // Arcade-style match effects: pulse, brighten, and fade
+    add(
+      SequenceEffect([
+        // Quick pulse grow
+        ScaleEffect.to(
+          Vector2.all(1.2),
+          EffectController(duration: 0.1),
+        ),
+        // Pulse shrink
+        ScaleEffect.to(
+          Vector2.all(0.9),
+          EffectController(duration: 0.1),
+        ),
+        // Grow again (bounce)
+        ScaleEffect.to(
+          Vector2.all(1.15),
+          EffectController(duration: 0.08),
+        ),
+      ]),
+    );
+    
+    // Simultaneous opacity fade with color tint
+    Future.delayed(const Duration(milliseconds: 200), () {
+      add(
+        OpacityEffect.to(
+          0.0,
+          EffectController(duration: 0.25),
+        ),
+      );
+      // Add white flash overlay effect
+      add(
+        ColorEffect(
+          Colors.white,
+          EffectController(duration: 0.15),
+          opacityFrom: 0.6,
+          opacityTo: 0.0,
+        ),
+      );
+    });
   }
 
   void applyGravity(double dt) {
@@ -60,6 +108,78 @@ class CarComponent extends SpriteComponent with CollisionCallbacks, HasGameRefer
     
     // Simple gravity implementation
     position.y += 200 * dt; // 200 pixels per second
+  }
+
+  // Animate car dropping from crane to target position
+  void animateDropFromCrane(Vector2 targetPosition, {VoidCallback? onComplete}) {
+    state = CarState.droppingFromCrane;
+    
+    // Fast drop animation with slight bounce on landing (arcade style)
+    final moveEffect = MoveEffect.to(
+      targetPosition,
+      EffectController(
+        duration: 0.35, // 350ms - fast arcade drop
+        curve: Curves.easeInCubic, // Accelerate down
+      ),
+      onComplete: () {
+        // Quick bounce effect on landing
+        add(
+          SequenceEffect([
+            ScaleEffect.to(
+              Vector2.all(1.15), // Squash on impact
+              EffectController(duration: 0.05),
+            ),
+            ScaleEffect.to(
+              Vector2.all(0.95), // Slight compress
+              EffectController(duration: 0.05),
+            ),
+            ScaleEffect.to(
+              Vector2.all(1.0), // Back to normal
+              EffectController(duration: 0.05),
+            ),
+          ], onComplete: () {
+            state = CarState.idle;
+            onComplete?.call();
+          }),
+        );
+      },
+    );
+    
+    add(moveEffect);
+  }
+
+  // Animate car falling due to gravity after matches cleared
+  void animateFallToPosition(Vector2 targetPosition, {VoidCallback? onComplete}) {
+    state = CarState.fallingFromGravity;
+    
+    // Quick gravity fall with snappy landing
+    final moveEffect = MoveEffect.to(
+      targetPosition,
+      EffectController(
+        duration: 0.25, // 250ms - snappy arcade gravity
+        curve: Curves.easeInQuad,
+      ),
+      onComplete: () {
+        // Subtle settle effect
+        add(
+          SequenceEffect([
+            ScaleEffect.to(
+              Vector2.all(1.1),
+              EffectController(duration: 0.04),
+            ),
+            ScaleEffect.to(
+              Vector2.all(1.0),
+              EffectController(duration: 0.04),
+            ),
+          ], onComplete: () {
+            state = CarState.idle;
+            onComplete?.call();
+          }),
+        );
+      },
+    );
+    
+    add(moveEffect);
   }
 
   @override
