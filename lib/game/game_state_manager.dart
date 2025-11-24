@@ -20,9 +20,13 @@ class GameStateManager {
   }
   
   void matchCleared(int matchSize) {
+    // Base points for match
+    int basePoints = 50;
+    
     // Bonus points for larger matches
-    int bonus = (matchSize - 4) * 5;
-    addScore(50 + bonus);
+    int sizeBonus = (matchSize - 4) * 5;
+    
+    addScore(basePoints + sizeBonus);
   }
   
   void pauseGame() {

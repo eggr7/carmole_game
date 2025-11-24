@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/themed_button.dart';
+import '../widgets/mode_selection_dialog.dart';
 import '../game/carmole_game.dart';
 import 'package:flame/game.dart';
 import 'leaderboard_screen.dart';
@@ -42,12 +43,24 @@ class _MainMenuScreenState extends State<MainMenuScreen>
     super.dispose();
   }
 
-  void _startGame() {
+  Future<void> _showModeSelection() async {
+    final selectedMode = await showDialog<GameMode>(
+      context: context,
+      builder: (context) => const ModeSelectionDialog(),
+    );
+    
+    if (selectedMode != null) {
+      _startGame(selectedMode);
+    }
+  }
+
+  void _startGame(GameMode mode) {
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => Scaffold(
           body: GameWidget(
             game: CarmoleGame(
+              gameMode: mode,
               onReturnToMenu: () {
                 Navigator.of(context).pop();
               },
@@ -176,7 +189,7 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                       const SizedBox(height: 20),
                       // Subtitle
                       Text(
-                        'Match 4 to Clear!',
+                        'Junkyard Puzzle Game',
                         style: TextStyle(
                           fontSize: 24,
                           color: Colors.white.withOpacity(0.9),
@@ -191,16 +204,16 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 80),
-                      // Play Button
+                      const SizedBox(height: 60),
+                      // Play Button - Shows mode selection
                       ThemedButton(
                         text: 'PLAY',
-                        onPressed: _startGame,
+                        onPressed: _showModeSelection,
                         width: 280,
                         height: 70,
                         isPrimary: true,
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
                       // Leaderboard Button
                       ThemedButton(
                         text: 'LEADERBOARD',
@@ -209,7 +222,7 @@ class _MainMenuScreenState extends State<MainMenuScreen>
                         height: 70,
                         isPrimary: false,
                       ),
-                      const SizedBox(height: 60),
+                      const SizedBox(height: 40),
                       // Instructions hint
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -257,4 +270,3 @@ class _MainMenuScreenState extends State<MainMenuScreen>
     );
   }
 }
-

@@ -1,5 +1,5 @@
 import 'dart:async';
-// import 'dart:math';
+import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flame/events.dart';
@@ -9,10 +9,13 @@ import 'package:flutter/material.dart';
 // import our components and game state manager
 import '../components/grid_component.dart';
 import '../components/crane_component.dart';
+import '../components/car_component.dart';
 import '../components/button_component.dart';
 import '../components/pause_menu_component.dart';
 import 'game_state_manager.dart';
 import '../services/leaderboard_service.dart';
+
+enum GameMode { classic, survival }
 
 class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, KeyboardHandler {
   static const int gridWidth = 6;
@@ -20,6 +23,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   static const double cellSize = 60.0;
   
   final VoidCallback? onReturnToMenu;
+  final GameMode gameMode;
   
   late GridComponent gameGrid;
   late CraneComponent crane;
@@ -28,6 +32,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   late TextComponent gameOverText;
   TextComponent? finalScoreText;
   TextComponent? topMessageText;
+  TextComponent? survivalCounterText; // For Survival mode
   late CustomButtonComponent restartButton;
   late CustomButtonComponent leftButton;
   late CustomButtonComponent rightButton;
@@ -46,7 +51,17 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
   int _lastRank = -1;
   PauseMenuComponent? _pauseMenu;
   
-  CarmoleGame({this.onReturnToMenu});
+  // Survival mode tracking
+  int _survivalDropCounter = 0;
+  final int _dropsPerRowAdd = 3;
+  
+  CarmoleGame({
+    this.onReturnToMenu,
+    this.gameMode = GameMode.classic,
+  });
+  
+  bool get isClassicMode => gameMode == GameMode.classic;
+  bool get isSurvivalMode => gameMode == GameMode.survival;
   
   @override
   Future<void> onLoad() async {
@@ -101,6 +116,23 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
       ),
     );
     world.add(scoreText);
+    
+    // Add survival counter if in survival mode
+    if (isSurvivalMode) {
+      survivalCounterText = TextComponent(
+        text: 'Next row in: 3 drops',
+        position: Vector2(0, -(CarmoleGame.gridHeight * cellSize) / 2 + 50),
+        anchor: Anchor.center,
+        textRenderer: TextPaint(
+          style: const TextStyle(
+            color: Color(0xFFFF6B35), // Safety orange
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+      world.add(survivalCounterText!);
+    }
     
     // Add game over display
     gameOverText = TextComponent(
@@ -189,6 +221,10 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     
     // Position crane at top center of the grid
     crane.position = Vector2(0, -255);
+    
+    // Reset survival counter
+    _survivalDropCounter = 0;
+    _updateSurvivalCounter();
   }
   
   void _togglePause() {
@@ -222,7 +258,68 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     }
     super.onTapDown(event);
     // Trigger crane to drop a car
+    _onCarDropped();
+  }
+  
+  void _onCarDropped() {
     crane.dropCar();
+    
+    // Handle survival mode logic
+    if (isSurvivalMode) {
+      _survivalDropCounter++;
+      _updateSurvivalCounter();
+      
+      // Check if we need to add a new row
+      if (_survivalDropCounter >= _dropsPerRowAdd) {
+        _survivalDropCounter = 0;
+        _updateSurvivalCounter();
+        // Add row after a short delay to let current drop settle
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (!gameState.isGameOver && !gameState.isPaused) {
+            _addRowFromBottom();
+          }
+        });
+      }
+    }
+  }
+  
+  void _updateSurvivalCounter() {
+    if (survivalCounterText != null) {
+      final remaining = _dropsPerRowAdd - _survivalDropCounter;
+      survivalCounterText!.text = 'Next row in: $remaining drops';
+    }
+  }
+  
+  void _addRowFromBottom() {
+    print('Adding new row from bottom...');
+    
+    // Generate random cars for the new row
+    final random = Random();
+    final colors = CarColor.values;
+    final newRowCars = <CarComponent>[];
+    
+    for (int col = 0; col < gridWidth; col++) {
+      final randomColor = colors[random.nextInt(colors.length)];
+      final car = CarComponent(carColor: randomColor);
+      newRowCars.add(car);
+    }
+    
+    // Use grid component to push rows up
+    gameGrid.pushRowsUpAndAddNew(newRowCars);
+    
+    // Check game over conditions for survival mode
+    _checkSurvivalGameOver();
+  }
+  
+  void _checkSurvivalGameOver() {
+    // Check if top row (row 0) has any cars
+    for (int col = 0; col < gridWidth; col++) {
+      if (gameGrid.grid[0][col] != null) {
+        print('Game Over: Car reached top row');
+        gameState.isGameOver = true;
+        return;
+      }
+    }
   }
 
   @override
@@ -236,6 +333,7 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     
     scoreText.text = 'Score: ${gameState.score}';
 
+    // Handle game over
     if (gameState.isGameOver && !_gameOverHandled) {
       _gameOverHandled = true;
       _handleGameOver();
@@ -284,6 +382,10 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
     _cachedScores = null;
     _showingLeaderboard = false;
     _gameOverHandled = false;
+    
+    // Reset survival counter
+    _survivalDropCounter = 0;
+    _updateSurvivalCounter();
     
     // Re-enable pause button
     if (world.contains(pauseButton)) {
@@ -577,6 +679,9 @@ class CarmoleGame extends FlameGame with HasCollisionDetection, TapCallbacks, Ke
         return true;
       } else if (keysPressed.contains(LogicalKeyboardKey.arrowRight)) {
         crane.moveRight();
+        return true;
+      } else if (keysPressed.contains(LogicalKeyboardKey.space)) {
+        _onCarDropped();
         return true;
       }
     }

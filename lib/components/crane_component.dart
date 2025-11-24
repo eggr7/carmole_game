@@ -76,7 +76,7 @@ class CraneComponent extends SpriteComponent with HasGameReference<CarmoleGame> 
       newCar.gridCol = currentColumn;
       game.gameGrid.grid[targetRow][currentColumn] = newCar;
       
-      print('Car dropped in column $currentColumn, row $targetRow');
+      print('🚗 Player dropped car in column $currentColumn, row $targetRow');
       
       // Animate the drop
       newCar.animateDropFromCrane(targetPos, onComplete: () {

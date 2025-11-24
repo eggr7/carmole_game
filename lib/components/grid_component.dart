@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 import '../game/carmole_game.dart';
 import 'car_component.dart';
@@ -110,6 +111,60 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
       car.removeFromParent();
     }
   }
+  
+  void pushRowsUpAndAddNew(List<CarComponent> newRowCars) {
+    print('Pushing all rows up and adding new row at bottom...');
+    
+    // Step 1: Move all existing cars up by one row
+    // Start from top and go down to avoid overwriting
+    for (int row = 0; row < CarmoleGame.gridHeight - 1; row++) {
+      for (int col = 0; col < CarmoleGame.gridWidth; col++) {
+        final car = grid[row + 1][col];
+        if (car != null) {
+          // Move car from row+1 to row
+          grid[row][col] = car;
+          grid[row + 1][col] = null;
+          car.gridRow = row;
+          car.gridCol = col;
+          
+          // Animate the push up
+          final targetPos = getCellPosition(row, col);
+          car.add(
+            MoveEffect.to(
+              targetPos,
+              EffectController(duration: 0.3),
+            ),
+          );
+        } else {
+          grid[row][col] = null;
+        }
+      }
+    }
+    
+    // Step 2: Add new row at bottom (row 7)
+    for (int col = 0; col < CarmoleGame.gridWidth && col < newRowCars.length; col++) {
+      final car = newRowCars[col];
+      grid[CarmoleGame.gridHeight - 1][col] = car;
+      car.gridRow = CarmoleGame.gridHeight - 1;
+      car.gridCol = col;
+      
+      // Position car below grid initially for animation
+      final startPos = getCellPosition(CarmoleGame.gridHeight, col);
+      car.position = startPos;
+      add(car);
+      
+      // Animate car sliding up into position
+      final targetPos = getCellPosition(CarmoleGame.gridHeight - 1, col);
+      car.add(
+        MoveEffect.to(
+          targetPos,
+          EffectController(duration: 0.3),
+        ),
+      );
+    }
+    
+    print('Row push complete. New row added at bottom.');
+  }
 
   void checkForMatches() {
     final List<CarComponent> matchedCars = [];
@@ -183,6 +238,7 @@ class GridComponent extends Component with HasGameReference<CarmoleGame> {
     if (clearedCars > 0) {
       game.gameState.carCleared();
       game.gameState.matchCleared(clearedCars);
+      
       // Apply gravity with animation after a brief delay
       Future.delayed(const Duration(milliseconds: 100), () {
         applyGravity();
